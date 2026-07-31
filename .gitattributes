@@ -1,2 +1,577 @@
-# Auto detect text files and perform LF normalization
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>RBL Thailand Branch</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#eef1f5;
+    --ink-dim:#9aa7b8;
+    --panel:#1b2430;
+    --panel-2:#222d3c;
+    --bg:#141b24;
+    --hair:#2e3947;
+    --amber:#f5a623;
+    --amber-dim:#7a5a1f;
+    --green:#3fb27f;
+    --mono: "SFMono-Regular", "JetBrains Mono", Consolas, "Courier New", monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(245,166,35,0.06), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:36px 20px 60px;
+  }
+  .masthead{
+    max-width:980px;
+    margin:0 auto 28px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:1px solid var(--hair);
+    padding-bottom:16px;
+  }
+  .masthead h1{
+    font-family:var(--mono);
+    font-size:15px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    margin:0;
+    color:var(--ink-dim);
+    font-weight:600;
+  }
+  .masthead h1 span{color:var(--amber);}
+  .masthead .tag{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-dim);
+    letter-spacing:.08em;
+  }
+  .demo-banner{
+    max-width:980px;
+    margin:0 auto 24px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--amber);
+    background:rgba(245,166,35,0.08);
+    border:1px solid var(--amber-dim);
+    border-radius:4px;
+    padding:9px 14px;
+    letter-spacing:.02em;
+  }
+  .layout{
+    max-width:980px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:1fr 300px;
+    gap:28px;
+    align-items:start;
+  }
+  @media (max-width:760px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  /* ---- Console (admin panel) ---- */
+  .console{
+    background:var(--panel);
+    border:1px solid var(--hair);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .console-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--hair);
+    background:var(--panel-2);
+  }
+  .signal{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--ink-dim);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.03);
+    transition:background .2s, box-shadow .2s;
+  }
+  .signal.live{
+    background:var(--amber);
+    box-shadow:0 0 0 4px rgba(245,166,35,0.18), 0 0 12px rgba(245,166,35,0.6);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:.55;}
+  }
+  .console-head .label{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.1em;
+    color:var(--ink-dim);
+    text-transform:uppercase;
+  }
+  .console-body{padding:20px;}
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin-bottom:6px;
+  }
+  .field input, .field textarea{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--hair);
+    border-radius:6px;
+    color:var(--ink);
+    padding:10px 12px;
+    font-size:14px;
+    font-family:var(--sans);
+    outline:none;
+    transition:border-color .15s;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--amber-dim);}
+  .field textarea{min-height:96px;resize:vertical;}
+  .charcount{
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--ink-dim);
+    text-align:right;
+    margin-top:4px;
+  }
+
+  .row{display:flex; gap:10px;}
+  .btn{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    border:none;
+    border-radius:6px;
+    padding:11px 16px;
+    cursor:pointer;
+    transition:transform .08s, opacity .15s;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{background:var(--amber); color:#1a1206; font-weight:700;}
+  .btn-primary:disabled{background:var(--amber-dim); color:#5c4a25; cursor:not-allowed;}
+  .btn-ghost{background:transparent; color:var(--ink-dim); border:1px solid var(--hair);}
+  .btn-ghost:hover{color:var(--ink);}
+
+  .status{
+    margin-top:12px;
+    font-family:var(--mono);
+    font-size:12px;
+    min-height:16px;
+  }
+  .status.ok{color:var(--green);}
+  .status.err{color:#e2634f;}
+
+  .whoami{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-dim);
+    margin-bottom:14px;
+  }
+  .whoami b{color:var(--ink);}
+
+  /* login */
+  .login-note{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-dim);
+    margin-bottom:14px;
+    line-height:1.6;
+  }
+
+  /* log */
+  .log{
+    border-top:1px solid var(--hair);
+    padding:16px 18px 18px;
+  }
+  .log h2{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin:0 0 10px;
+  }
+  .log-empty{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-dim);
+    opacity:.6;
+  }
+  .log-item{
+    padding:8px 0;
+    border-bottom:1px solid var(--hair);
+    font-size:13px;
+  }
+  .log-item:last-child{border-bottom:none;}
+  .log-item .t{font-weight:600;}
+  .log-item .m{
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--ink-dim);
+    margin-top:2px;
+  }
+
+  /* ---- Phone preview ---- */
+  .phone-wrap{
+    position:sticky;
+    top:36px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .phone-caption{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  .phone{
+    width:260px;
+    height:540px;
+    background:#000;
+    border-radius:36px;
+    padding:10px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.6), 0 0 0 1px var(--hair);
+  }
+  .phone-screen{
+    width:100%;
+    height:100%;
+    background:#0f1520;
+    border-radius:26px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .notch{
+    position:absolute;
+    top:8px; left:50%; transform:translateX(-50%);
+    width:70px; height:16px;
+    background:#000;
+    border-radius:10px;
+    z-index:2;
+  }
+  .appbar{
+    background:var(--panel-2);
+    padding:32px 16px 12px;
+    font-weight:700;
+    font-size:16px;
+    color:var(--ink);
+    border-bottom:1px solid var(--hair);
+  }
+  .screen-body{
+    flex:1;
+    padding:22px 18px;
+    overflow-y:auto;
+  }
+  .empty-state{
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:var(--ink-dim);
+    font-size:14px;
+    padding:0 20px;
+  }
+  .ann-title{
+    font-size:19px;
+    font-weight:700;
+    color:var(--ink);
+    margin:0 0 10px;
+    line-height:1.3;
+  }
+  .ann-body{
+    font-size:14px;
+    color:#c9d2dc;
+    line-height:1.55;
+    margin:0 0 16px;
+    white-space:pre-wrap;
+  }
+  .ann-sent{
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--ink-dim);
+    font-style:italic;
+  }
+  .push-toast{
+    position:absolute;
+    top:38px; left:8px; right:8px;
+    background:rgba(30,38,50,0.96);
+    border:1px solid var(--hair);
+    border-radius:12px;
+    padding:10px 12px;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    opacity:0;
+    transform:translateY(-14px);
+    pointer-events:none;
+    transition:opacity .25s, transform .25s;
+    z-index:5;
+  }
+  .push-toast.show{opacity:1; transform:translateY(0);}
+  .push-icon{
+    width:22px;height:22px;border-radius:6px;
+    background:var(--amber);
+    flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;
+  }
+  .push-text{font-size:12px;}
+  .push-text .pt-title{font-weight:700; color:var(--ink);}
+  .push-text .pt-body{color:var(--ink-dim); font-size:11.5px; margin-top:1px;}
+
+  footer{
+    max-width:980px;
+    margin:40px auto 0;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-dim);
+    line-height:1.7;
+    border-top:1px solid var(--hair);
+    padding-top:16px;
+  }
+  footer code{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <h1>Announcement<span>/</span>Broadcast</h1>
+  <div class="tag">topic: all · admin console</div>
+</div>
+
+<div class="demo-banner">
+  ⚠ DEMO MODE — no real Firebase project connected. Sign-in and sending are simulated in memory; nothing leaves this browser tab.
+</div>
+
+<div class="layout">
+  <div>
+    <!-- Console -->
+    <div class="console">
+      <div class="console-head">
+        <div class="signal" id="signal"></div>
+        <div class="label" id="consoleLabel">Not signed in</div>
+      </div>
+
+      <div class="console-body">
+        <!-- LOGIN -->
+        <div id="loginBox">
+          <div class="login-note">Any email + password works in this demo — it just simulates the admin auth check.</div>
+          <div class="field">
+            <label>Email</label>
+            <input id="email" type="email" placeholder="admin@example.com" value="admin@example.com" />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input id="password" type="password" placeholder="••••••••" value="demo1234" />
+          </div>
+          <button class="btn btn-primary" id="loginBtn">Sign in</button>
+          <div class="status err" id="loginStatus"></div>
+        </div>
+
+        <!-- SEND -->
+        <div id="sendBox" style="display:none;">
+          <div class="whoami">Signed in as <b id="whoami"></b></div>
+          <div class="field">
+            <label>Title</label>
+            <input id="title" type="text" maxlength="100" placeholder="e.g. Scheduled maintenance tonight" />
+          </div>
+          <div class="field">
+            <label>Body</label>
+            <textarea id="bodyText" maxlength="500" placeholder="Write the announcement…"></textarea>
+            <div class="charcount"><span id="charcount">0</span>/500</div>
+          </div>
+          <div class="row">
+            <button class="btn btn-primary" id="sendBtn">Send announcement</button>
+            <button class="btn btn-ghost" id="signOutBtn">Sign out</button>
+          </div>
+          <div class="status" id="status"></div>
+        </div>
+      </div>
+
+      <div class="log">
+        <h2>Announcement log</h2>
+        <div id="logList"><div class="log-empty">Nothing sent yet in this session.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone-caption">Flutter client — live preview</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="notch"></div>
+        <div class="push-toast" id="pushToast">
+          <div class="push-icon">🔔</div>
+          <div class="push-text">
+            <div class="pt-title" id="pushTitle"></div>
+            <div class="pt-body" id="pushBody"></div>
+          </div>
+        </div>
+        <div class="appbar">Announcement</div>
+        <div class="screen-body" id="screenBody">
+          <div class="empty-state">No announcements yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  This page simulates <code>admin_panel/index.html</code> + <code>AnnouncementScreen</code> from the uploaded project.
+  In the real app, "Sign in" is Firebase Auth, "Send announcement" is a callable Cloud Function
+  (<code>sendAnnouncement</code>) that writes <code>announcements/latest</code> in Firestore and publishes to FCM
+  topic <code>all</code>, and the phone screen is a live <code>StreamBuilder</code> on that same document — not the
+  push payload. See the README for the real deploy steps.
+</footer>
+
+<script>
+  const signal = document.getElementById('signal');
+  const consoleLabel = document.getElementById('consoleLabel');
+  const loginBox = document.getElementById('loginBox');
+  const sendBox = document.getElementById('sendBox');
+  const loginStatus = document.getElementById('loginStatus');
+  const status = document.getElementById('status');
+  const whoami = document.getElementById('whoami');
+  const logList = document.getElementById('logList');
+  const screenBody = document.getElementById('screenBody');
+  const pushToast = document.getElementById('pushToast');
+  const pushTitle = document.getElementById('pushTitle');
+  const pushBody = document.getElementById('pushBody');
+  const charcount = document.getElementById('charcount');
+
+  let currentUser = null;
+  let sentLog = [];
+
+  document.getElementById('bodyText').addEventListener('input', (e) => {
+    charcount.textContent = e.target.value.length;
+  });
+
+  function bangkokTimeString(date) {
+    const utc = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    const bkk = new Date(utc.getTime() + 7 * 3600000);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const d = bkk.getDate();
+    const m = months[bkk.getMonth()];
+    const y = bkk.getFullYear();
+    const hh = String(bkk.getHours()).padStart(2,'0');
+    const mm = String(bkk.getMinutes()).padStart(2,'0');
+    return `${d} ${m} ${y}, ${hh}:${mm} (Asia/Bangkok)`;
+  }
+
+  document.getElementById('loginBtn').onclick = () => {
+    loginStatus.textContent = '';
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    if (!email || !password) {
+      loginStatus.textContent = 'Email and password are both required.';
+      return;
+    }
+    currentUser = { email };
+    loginBox.style.display = 'none';
+    sendBox.style.display = 'block';
+    whoami.textContent = currentUser.email;
+    consoleLabel.textContent = 'Signed in — ready to broadcast';
+  };
+
+  document.getElementById('signOutBtn').onclick = () => {
+    currentUser = null;
+    loginBox.style.display = 'block';
+    sendBox.style.display = 'none';
+    consoleLabel.textContent = 'Not signed in';
+    signal.classList.remove('live');
+    status.textContent = '';
+    status.className = 'status';
+  };
+
+  document.getElementById('sendBtn').onclick = () => {
+    const title = document.getElementById('title').value.trim();
+    const bodyText = document.getElementById('bodyText').value.trim();
+    status.className = 'status';
+    status.textContent = '';
+
+    if (!title || !bodyText) {
+      status.className = 'status err';
+      status.textContent = 'Title and body are both required.';
+      return;
+    }
+
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    status.textContent = 'Sending…';
+    signal.classList.add('live');
+
+    setTimeout(() => {
+      const now = new Date();
+      const sentTimeText = bangkokTimeString(now);
+
+      screenBody.innerHTML = `
+        <div class="ann-title"></div>
+        <div class="ann-body"></div>
+        <div class="ann-sent"></div>
+      `;
+      screenBody.querySelector('.ann-title').textContent = title;
+      screenBody.querySelector('.ann-body').textContent = bodyText;
+      screenBody.querySelector('.ann-sent').textContent = `Sent: ${sentTimeText}`;
+
+      pushTitle.textContent = title;
+      pushBody.textContent = bodyText.length > 60 ? bodyText.slice(0, 60) + '…' : bodyText;
+      pushToast.classList.add('show');
+      setTimeout(() => pushToast.classList.remove('show'), 2600);
+
+      sentLog.unshift({ title, bodyText, sentTimeText });
+      renderLog();
+
+      status.className = 'status ok';
+      status.textContent = 'Sent! Push delivered to topic "all".';
+      document.getElementById('title').value = '';
+      document.getElementById('bodyText').value = '';
+      charcount.textContent = '0';
+      btn.disabled = false;
+      setTimeout(() => signal.classList.remove('live'), 1400);
+    }, 700);
+  };
+
+  function renderLog() {
+    if (sentLog.length === 0) {
+      logList.innerHTML = '<div class="log-empty">Nothing sent yet in this session.</div>';
+      return;
+    }
+    logList.innerHTML = sentLog.map(item => `
+      <div class="log-item">
+        <div class="t">${escapeHtml(item.title)}</div>
+        <div class="m">${escapeHtml(item.sentTimeText)}</div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html># Auto detect text files and perform LF normalization
 * text=auto
